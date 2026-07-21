@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Industrial Plant Sensor Monitoring Dashboard</title>
+    
+    <!-- Leaflet CSS from CDN (makes the file self-contained and easy to run anywhere) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom Layout and Sensor Styling -->
+    <link rel="stylesheet" href="src/Style.css" />
+  </head>
+  <body>
+    <!-- --- HEADER --- -->
+    <header id="header-control">
+      <div class="brand" id="app-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+        <h1>Plant Telemetry Dashboard</h1>
+        <div class="status-badge" id="loaded-status">
+          <span class="dot"></span>
+          <span id="loaded-status-text">Loading schematic...</span>
+        </div>
+      </div>
+      
+      <div class="controls-top">
+        <!-- Layout Designer Link -->
+        <a href="designer.html" class="load-demo-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; background-color: #4f46e5; border-color: #4338ca; color: #ffffff;" title="Open visual layout designer whiteboard">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          HMI Designer
+        </a>
+
+        <!-- Download Demo Link -->
+        <a href="industrial_sensor_timeseries.json" download="industrial_sensor_timeseries.json" id="btn-generate-demo" class="load-demo-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;" title="Save a demo timeseries dataset to upload/test">
+          Download Sample JSON
+        </a>
+        
+        <!-- Load Custom File Button -->
+        <div class="file-upload-wrapper">
+          <button class="file-upload-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Load Timeseries JSON
+          </button>
+          <input type="file" id="json-file-input" class="file-upload-input" accept=".json" />
+        </div>
+      </div>
+    </header>
+
+    <!-- --- MAIN MAP STAGE --- -->
+    <div id="map-container">
+      <div id="map"></div>
+      
+      <!-- Collapsible Legend Trigger Button (Google Maps Layers Style) -->
+      <button id="btn-legend-toggle" class="legend-toggle-btn" title="Toggle System Legend & Diagnostics">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+      </button>
+
+      <!-- Collapsible Floating Legend Panel overlayed on Leaflet -->
+      <div class="map-overlay-panel" id="map-legend">
+        <div class="legend-header">
+          <h3 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em;">System Diagnostics</h3>
+          <button id="btn-legend-close" class="legend-close-btn" title="Minimize Legend">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: var(--color-ok);"></span>
+          <span class="legend-desc">Nominal (OK)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: var(--color-warn);"></span>
+          <span class="legend-desc">Warning Limit Triggered</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: var(--color-alarm);"></span>
+          <span class="legend-desc">Critical Alarm / Tripped</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: var(--color-disabled);"></span>
+          <span class="legend-desc">Stale / Off / Inhibit</span>
+        </div>
+        
+        <div style="font-size: 0.75rem; color: #1e293b; font-weight: 600; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+          Sensor Flags (Top-Right Marker)
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #10b981; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 4px rgba(16,185,129,0.5);"></span>
+          <span class="legend-desc">Flag: OK (Pulsing Green)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #f59e0b; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 4px rgba(245,158,11,0.5);"></span>
+          <span class="legend-desc">Flag: Inhibit / Warn (Pulsing Amber)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #ef4444; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 4px rgba(239,68,68,0.5);"></span>
+          <span class="legend-desc">Flag: Trip / Alarm (Pulsing Red)</span>
+        </div>
+
+        <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 6px; line-height: 1.35;">
+          <strong>Interactive tips:</strong> Hover over sensors for parameters & live flags. Pinch or scroll to zoom, and the components will scale dynamically.
+        </div>
+      </div>
+    </div>
+
+    <!-- --- FOOTER PLAYBACK PANEL --- -->
+    <footer id="playback-footer">
+      <div class="playback-row">
+        <!-- Left Buttons block -->
+        <div class="playback-buttons">
+          <button id="btn-reset" class="btn-icon" title="Jump to Start" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>
+          </button>
+          <button id="btn-prev" class="btn-icon" title="Step Back" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+          </button>
+          <button id="btn-play" class="btn-icon play-pause" title="Play / Pause" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          </button>
+          <button id="btn-next" class="btn-icon" title="Step Forward" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+          </button>
+        </div>
+
+        <!-- Middle Slider block -->
+        <div class="timeline-container">
+          <div class="timeline-slider-wrapper">
+            <input type="range" id="time-slider" class="timeline-slider" min="0" max="0" value="0" disabled />
+          </div>
+          <div class="time-display" id="time-ticker">--- --:--:--</div>
+        </div>
+
+        <!-- Right Speed block -->
+        <div class="speed-control">
+          <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 500;">Speed:</span>
+          <select id="speed-multiplier" class="speed-select">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1.0x</option>
+            <option value="2">2.0x</option>
+            <option value="5">5.0x</option>
+            <option value="10">10x</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Live Active Alerts / Alarms Summary -->
+      <div class="status-summary-row">
+        <div class="active-alarms-container">
+          <span id="alarm-badge-count" class="alarm-count-badge">0 Alerts</span>
+          <div class="alarm-list-scroll" id="alarm-scroll-container">
+            <span style="color:#64748b; font-style:italic;">System operating within nominal thresholds.</span>
+          </div>
+        </div>
+        <div style="font-size:0.75rem; color:#64748b; font-family:'JetBrains Mono', monospace;">
+          SYSTEM: STATUS_NOMINAL
+        </div>
+      </div>
+    </footer>
+
+    <!-- Leaflet Engine from CDN -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Sensor Layout specifications (window.sensorLayout) -->
+    <script src="src/layout.js"></script>
+    
+    <!-- Core Application code (Map + Overlays + Player) -->
+    <script src="src/App.js"></script>
+  </body>
+</html>

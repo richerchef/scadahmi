@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HMI Layout Designer</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    /* Grid background pattern for layout canvas */
+    .canvas-grid {
+      background-size: 20px 20px;
+      background-image: 
+        linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+    }
+    
+    /* Highlight selected elements */
+    .selected-component {
+      outline: 2px dashed #6366f1 !important;
+      outline-offset: 4px;
+      z-index: 50 !important;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col font-sans">
+
+  <!-- TOP NAV BAR -->
+  <header class="h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-10 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg flex items-center justify-center">
+        <i data-lucide="layout-template" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+          Industrial HMI Layout Designer
+          <span class="text-[10px] bg-slate-800 text-indigo-400 border border-slate-700 px-1.5 py-0.5 rounded font-mono font-medium">V1.5</span>
+        </h1>
+        <p class="text-[11px] text-slate-400">Design sensor layouts visually and generate your layout.js</p>
+      </div>
+    </div>
+
+    <!-- Quick action tools -->
+    <div class="flex items-center gap-3">
+      <!-- Import layout.js Uploader -->
+      <label class="flex items-center gap-2 text-xs bg-indigo-600 border border-indigo-500 hover:bg-indigo-500 transition px-3 py-2 rounded-lg cursor-pointer font-medium text-white shadow-sm" title="Upload an existing layout.js to restore and edit your layout">
+        <i data-lucide="upload-cloud" class="w-4 h-4 text-indigo-100"></i>
+        <span>Import layout.js</span>
+        <input type="file" id="layout-file-input" accept=".js" class="hidden" />
+      </label>
+
+      <!-- Background Image Uploader -->
+      <label class="flex items-center gap-2 text-xs bg-slate-800 border border-slate-700 hover:bg-slate-750 transition px-3 py-2 rounded-lg cursor-pointer font-medium text-slate-200">
+        <i data-lucide="image" class="w-4 h-4 text-slate-400"></i>
+        <span>Load Custom Image</span>
+        <input type="file" id="bg-file-input" accept="image/*" class="hidden" />
+      </label>
+
+      <!-- Back to App Link -->
+      <a href="/index.html" class="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition ml-2">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Back to live HMI
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- LEFT SIDEBAR: COMPONENTS & QUICK CONTROLS -->
+    <aside class="w-80 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0">
+      <div class="p-4 border-b border-slate-800">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">1. Background Settings</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Image URL Source</label>
+            <input type="text" id="bg-url-input" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Paste URL..." />
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center text-xs">
+            <button id="btn-use-reactor" class="bg-indigo-600/10 hover:bg-indigo-600/25 border border-indigo-500/30 text-indigo-300 rounded py-1.5 transition font-medium">
+              Default Schematic
+            </button>
+            <button id="btn-use-blueprint" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 rounded py-1.5 transition font-medium">
+              Grid Blueprint
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-b border-slate-800 flex-1 overflow-y-auto">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">2. Add HMI Component</h2>
+        <p class="text-[11px] text-slate-400 mb-4">Click a category below to instantly inject it at the center of your layout board:</p>
+        
+        <div class="grid grid-cols-1 gap-2.5">
+          <!-- Add Tank -->
+          <button id="add-tank" class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500 hover:bg-slate-950/70 transition text-left group">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded bg-indigo-600/20 text-indigo-400 group-hover:bg-indigo-600/30 transition">
+                <i data-lucide="container" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200">Storage Tank</div>
+                <div class="text-[10px] text-slate-500">Draggable & Resizable shell</div>
+              </div>
+            </div>
+            <i data-lucide="plus" class="w-4 h-4 text-slate-500 group-hover:text-slate-300"></i>
+          </button>
+
+          <!-- Add Pump -->
+          <button id="add-pump" class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-emerald-500 hover:bg-slate-950/70 transition text-left group">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded bg-emerald-600/20 text-emerald-400 group-hover:bg-emerald-600/30 transition">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200">Process Pump</div>
+                <div class="text-[10px] text-slate-500">Digital running state circular icon</div>
+              </div>
+            </div>
+            <i data-lucide="plus" class="w-4 h-4 text-slate-500 group-hover:text-slate-300"></i>
+          </button>
+
+          <!-- Add Valve -->
+          <button id="add-valve" class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500 hover:bg-slate-950/70 transition text-left group">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded bg-amber-600/20 text-amber-400 group-hover:bg-amber-600/30 transition">
+                <i data-lucide="split" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200">Control Valve</div>
+                <div class="text-[10px] text-slate-500">Digital state butterfly valve</div>
+              </div>
+            </div>
+            <i data-lucide="plus" class="w-4 h-4 text-slate-500 group-hover:text-slate-300"></i>
+          </button>
+
+          <!-- Add Dial -->
+          <button id="add-dial" class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-sky-500 hover:bg-slate-950/70 transition text-left group">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded bg-sky-600/20 text-sky-400 group-hover:bg-sky-600/30 transition">
+                <i data-lucide="gauge" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200">Dial / Pipeline Meter</div>
+                <div class="text-[10px] text-slate-500">Sliding scale and numeric reading</div>
+              </div>
+            </div>
+            <i data-lucide="plus" class="w-4 h-4 text-slate-500 group-hover:text-slate-300"></i>
+          </button>
+        </div>
+
+        <div class="mt-6 bg-slate-950 border border-slate-800 p-3 rounded-lg">
+          <h3 class="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
+            <i data-lucide="mouse-pointer" class="w-3.5 h-3.5 text-indigo-400"></i>
+            How to Edit
+          </h3>
+          <ul class="text-[10px] text-slate-400 space-y-1.5 list-disc pl-3">
+            <li>Drag any component to position it on the schematic.</li>
+            <li>Select any component to edit its details on the right panel.</li>
+            <li>For tanks, drag the white handle in the bottom-right corner to resize.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Left Sidebar Footer: Total count -->
+      <div class="p-4 bg-slate-950/40 border-t border-slate-850 text-[11px] text-slate-500 flex justify-between items-center">
+        <span>Component Count:</span>
+        <span id="component-count" class="font-mono text-slate-300 font-bold bg-slate-800 px-1.5 py-0.5 rounded">0</span>
+      </div>
+    </aside>
+
+    <!-- CENTER AREA: INTERACTIVE CANVAS WITH PANNING & GRID -->
+    <main class="flex-1 bg-slate-950 p-6 flex items-center justify-center relative overflow-auto canvas-grid select-none" id="designer-canvas-container">
+      
+      <!-- WHITEBOARD CONTAINER (Matches exact image overlay coordinate system) -->
+      <div id="whiteboard" class="relative bg-slate-900 shadow-2xl transition-all duration-300 flex-shrink-0" style="width: 1200px; height: 600px;">
+        <!-- Loaded Schematic Background Image -->
+        <img id="bg-image-preview" src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1470&auto=format&fit=crop" class="w-full h-full object-cover opacity-35 filter grayscale pointer-events-none" alt="Industrial schematic diagram" />
+        
+        <!-- Interactive overlays injected here -->
+        <div id="elements-layer" class="absolute inset-0"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR: PROPERTIES INSPECTOR & CODE PREVIEW -->
+    <aside class="w-96 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0">
+      
+      <!-- INSPECTOR TAB PANEL -->
+      <div class="flex border-b border-slate-800 shrink-0">
+        <button id="tab-btn-inspector" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider text-white border-b-2 border-indigo-500 bg-slate-900/60">
+          Inspector
+        </button>
+        <button id="tab-btn-code" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white border-b-2 border-transparent bg-slate-950/20">
+          Export Code
+        </button>
+      </div>
+
+      <!-- PANEL CONTENT: INSPECTOR -->
+      <div id="panel-inspector" class="flex-1 flex flex-col overflow-y-auto">
+        <div id="inspector-empty" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+          <div class="bg-slate-950/50 p-4 rounded-full border border-slate-850 text-slate-600 mb-3">
+            <i data-lucide="info" class="w-8 h-8"></i>
+          </div>
+          <p class="text-xs font-semibold text-slate-400">No Component Selected</p>
+          <p class="text-[10px] text-slate-500 mt-1 max-w-[200px]">Click any component on the whiteboard to inspect and customize its parameters.</p>
+        </div>
+
+        <div id="inspector-form" class="hidden p-5 space-y-4">
+          <!-- Active Header -->
+          <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+            <div>
+              <span id="inspect-tag-type" class="text-[9px] uppercase tracking-wider font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">Temptag</span>
+              <h3 id="inspect-header-id" class="text-sm font-bold text-white mt-1.5 font-mono">ID: T101</h3>
+            </div>
+            <button id="btn-delete-element" class="text-xs bg-red-950 hover:bg-red-900 text-red-300 hover:text-red-200 border border-red-800/40 px-2.5 py-1.5 rounded transition flex items-center gap-1.5 font-medium">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              Delete
+            </button>
+          </div>
+
+          <!-- Base Settings -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Unique Sensor ID</label>
+              <input type="text" id="prop-id" class="w-full bg-slate-950 border border-slate-850 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono font-bold" />
+              <p class="text-[9px] text-slate-500 mt-0.5">Must be unique (e.g. T101, P102, V101, PH102)</p>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Display Name</label>
+              <input type="text" id="prop-name" class="w-full bg-slate-950 border border-slate-850 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. Feed Holding Tank" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Purpose / Description</label>
+              <textarea id="prop-purpose" rows="2" class="w-full bg-slate-950 border border-slate-850 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 resize-none" placeholder="Explain what this component monitors or controls..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data Type</label>
+                <select id="prop-type" class="w-full bg-slate-950 border border-slate-850 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                  <option value="analogue">Analogue (Value)</option>
+                  <option value="digital">Digital (States)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Units (optional)</label>
+                <input type="text" id="prop-units" class="w-full bg-slate-950 border border-slate-850 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" placeholder="e.g. %, bar, pH" />
+              </div>
+            </div>
+          </div>
+
+          <!-- VALVE SPECIFIC ORIENTATION FIELD -->
+          <div id="prop-section-valve" class="hidden pt-3 border-t border-slate-850">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Valve Orientation</label>
+            <select id="prop-orientation" class="w-full bg-slate-950 border border-slate-850 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="horizontal">Horizontal (▬)</option>
+              <option value="vertical">Vertical (▮)</option>
+            </select>
+            <p class="text-[9px] text-slate-500 mt-1">This rotates the valve rendering by 90 degrees to align with pipelines.</p>
+          </div>
+
+          <!-- COMPONENT SIZING FIELDS (PUMP, VALVE, DIAL) -->
+          <div id="prop-section-sizing" class="hidden pt-3 border-t border-slate-850 space-y-2">
+            <h4 class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Component Size</h4>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Width (px)</label>
+                <input type="number" id="prop-width" min="20" max="300" step="1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Height (px)</label>
+                <input type="number" id="prop-height" min="20" max="300" step="1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+            <p class="text-[9px] text-slate-500">Adjust the dimensions of this overlay element.</p>
+          </div>
+
+          <!-- ANALOGUE SPECIFIC LIMITS FIELD -->
+          <div id="prop-section-limits" class="hidden pt-3 border-t border-slate-850 space-y-3">
+            <h4 class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Analogue Alert Limits</h4>
+            
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Trip Low Limit</label>
+                <input type="number" id="prop-lowlimit" step="0.1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Warning Low Limit</label>
+                <input type="number" id="prop-warnlow" step="0.1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Warning High Limit</label>
+                <input type="number" id="prop-warnhigh" step="0.1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[9px] text-slate-400 font-mono">Trip High Limit</label>
+                <input type="number" id="prop-highlimit" step="0.1" class="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+            <p class="text-[9px] text-slate-500">Values exceeding warnings turn warning amber. Values exceeding trips turn red.</p>
+          </div>
+
+          <!-- DIGITAL SPECIFIC STATES FIELD -->
+          <div id="prop-section-digital" class="hidden pt-3 border-t border-slate-850 space-y-2">
+            <h4 class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Digital States Mapping</h4>
+            <div class="space-y-1.5" id="digital-states-container">
+              <div class="grid grid-cols-[25px_1fr] gap-2 items-center">
+                <span class="text-[10px] font-mono text-slate-400 text-right">0:</span>
+                <input type="text" data-state-idx="0" class="prop-state-input w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. Stopped" />
+              </div>
+              <div class="grid grid-cols-[25px_1fr] gap-2 items-center">
+                <span class="text-[10px] font-mono text-slate-400 text-right">1:</span>
+                <input type="text" data-state-idx="1" class="prop-state-input w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. Running" />
+              </div>
+              <div class="grid grid-cols-[25px_1fr] gap-2 items-center">
+                <span class="text-[10px] font-mono text-slate-400 text-right">2:</span>
+                <input type="text" data-state-idx="2" class="prop-state-input w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. Tripped" />
+              </div>
+              <div class="grid grid-cols-[25px_1fr] gap-2 items-center">
+                <span class="text-[10px] font-mono text-slate-400 text-right">3:</span>
+                <input type="text" data-state-idx="3" class="prop-state-input w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. State 3 (optional)" />
+              </div>
+              <div class="grid grid-cols-[25px_1fr] gap-2 items-center">
+                <span class="text-[10px] font-mono text-slate-400 text-right">4:</span>
+                <input type="text" data-state-idx="4" class="prop-state-input w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="e.g. State 4 (optional)" />
+              </div>
+            </div>
+            <p class="text-[9px] text-slate-500">Assign text labels to digital state values (0 to 4).</p>
+          </div>
+
+          <!-- COORDINATES VIEW ONLY -->
+          <div class="pt-3 border-t border-slate-850 grid grid-cols-2 gap-2 text-center text-[10px] text-slate-400 font-mono">
+            <div class="bg-slate-950/60 p-1.5 rounded border border-slate-850">
+              <span class="text-slate-500 block text-[8px] uppercase">Coord X</span>
+              <span id="coord-x">0</span>
+            </div>
+            <div class="bg-slate-950/60 p-1.5 rounded border border-slate-850">
+              <span class="text-slate-500 block text-[8px] uppercase">Coord Y</span>
+              <span id="coord-y">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL CONTENT: EXPORT CODE -->
+      <div id="panel-code" class="flex-1 flex flex-col hidden overflow-hidden bg-slate-950">
+        <div class="p-4 border-b border-slate-850 flex justify-between items-center shrink-0">
+          <span class="text-[10px] font-mono text-slate-400">Generated layout.js Code</span>
+          <div class="flex gap-1.5">
+            <button id="btn-copy-code" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-2.5 py-1 rounded transition flex items-center gap-1">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              Copy
+            </button>
+            <button id="btn-download-code" class="text-[11px] bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-medium px-2.5 py-1 rounded transition flex items-center gap-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Download
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 p-3 overflow-auto">
+          <pre class="text-[10px] font-mono text-indigo-300 leading-relaxed"><code id="code-block" class="whitespace-pre">Loading layout representation...</code></pre>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- WHITEBOARD CANVAS OVERLAY CSS TO RENDER AS CLOSE TO HMI AS POSSIBLE -->
+  <style>
+    /* Mimic Leaflet simple icons overlay coordinates inside whiteboard coordinates */
+    .whiteboard-element {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      user-select: none;
+    }
+    .whiteboard-element:active {
+      cursor: grabbing;
+    }
+
+    /* Tanks inside layout editor */
+    .tank-shell-editor {
+      width: 100%;
+      height: 100%;
+      border: 3px solid #475569;
+      background-color: rgba(30, 41, 59, 0.6);
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .tank-title-editor {
+      font-weight: 800;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tank-resize-handle {
+      position: absolute;
+      bottom: -3px;
+      right: -3px;
+      width: 12px;
+      height: 12px;
+      background-color: #ffffff;
+      border: 2px solid #475569;
+      border-radius: 50%;
+      cursor: se-resize;
+      z-index: 100;
+    }
+
+    /* Pump design inside layout editor */
+    .pump-body-editor {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid #475569;
+      background-color: #475569;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Dial card inside layout editor */
+    .dial-card-editor {
+      width: 82px;
+      height: 60px;
+      background-color: rgba(30, 41, 59, 0.95);
+      border: 1.5px solid #64748b;
+      border-radius: 6px;
+      padding: 4px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Valve design inside layout editor */
+    .valve-body-editor {
+      width: 50px;
+      height: 32px;
+      border: 2px solid #475569;
+      background-color: #64748b;
+      color: #e2e8f0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+    }
+    .valve-body-editor.vertical {
+      transform: rotate(90deg);
+    }
+  </style>
+
+  <!-- DESIGNER ENGINE CODE -->
+  <script>
+    // App State
+    let currentLayout = {
+      imageUrl: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1470&auto=format&fit=crop",
+      imageWidth: 1200,
+      imageHeight: 600,
+      sensors: []
+    };
+
+    let selectedElementId = null;
+    let isDragging = false;
+    let isResizing = false;
+    let dragOffset = { x: 0, y: 0 };
+    let resizeStartDims = { w: 0, h: 0, x: 0, y: 0 };
+
+    // DOM Elements
+    const whiteboard = document.getElementById("whiteboard");
+    const elementsLayer = document.getElementById("elements Layer") || document.getElementById("elements-layer");
+    const bgImagePreview = document.getElementById("bg-image-preview");
+    
+    const bgUrlInput = document.getElementById("bg-url-input");
+    const bgFileInput = document.getElementById("bg-file-input");
+    
+    const btnUseReactor = document.getElementById("btn-use-reactor");
+    const btnUseBlueprint = document.getElementById("btn-use-blueprint");
+    
+    const addTankBtn = document.getElementById("add-tank");
+    const addPumpBtn = document.getElementById("add-pump");
+    const addValveBtn = document.getElementById("add-valve");
+    const addDialBtn = document.getElementById("add-dial");
+    
+    const inspectorEmpty = document.getElementById("inspector-empty");
+    const inspectorForm = document.getElementById("inspector-form");
+    const componentCountEl = document.getElementById("component-count");
+    
+    // Form Inputs
+    const propId = document.getElementById("prop-id");
+    const propName = document.getElementById("prop-name");
+    const propPurpose = document.getElementById("prop-purpose");
+    const propType = document.getElementById("prop-type");
+    const propUnits = document.getElementById("prop-units");
+    const propOrientation = document.getElementById("prop-orientation");
+    
+    const propWidth = document.getElementById("prop-width");
+    const propHeight = document.getElementById("prop-height");
+    
+    const propSecValve = document.getElementById("prop-section-valve");
+    const propSecSizing = document.getElementById("prop-section-sizing");
+    const propSecLimits = document.getElementById("prop-section-limits");
+    const propSecDigital = document.getElementById("prop-section-digital");
+    
+    const layoutFileInput = document.getElementById("layout-file-input");
+    
+    const propLowLimit = document.getElementById("prop-lowlimit");
+    const propWarnLow = document.getElementById("prop-warnlow");
+    const propWarnHigh = document.getElementById("prop-warnhigh");
+    const propHighLimit = document.getElementById("prop-highlimit");
+    
+    const coordX = document.getElementById("coord-x");
+    const coordY = document.getElementById("coord-y");
+    
+    const btnDeleteElement = document.getElementById("btn-delete-element");
+    
+    // Tabs
+    const tabBtnInspector = document.getElementById("tab-btn-inspector");
+    const tabBtnCode = document.getElementById("tab-btn-code");
+    const panelInspector = document.getElementById("panel-inspector");
+    const panelCode = document.getElementById("panel-code");
+    const codeBlock = document.getElementById("code-block");
+    const btnCopyCode = document.getElementById("btn-copy-code");
+    const btnDownloadCode = document.getElementById("btn-download-code");
+
+    // Initialize layout with any pre-existing structures in workspace if possible
+    window.addEventListener("DOMContentLoaded", () => {
+      // First, trigger Lucide icon renders
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+      // Check if window.sensorLayout exists (defined in current layout.js loaded as a script/mocked)
+      if (window.sensorLayout) {
+        currentLayout = JSON.parse(JSON.stringify(window.sensorLayout));
+      } else {
+        // Build fallback starting sensor set matching the standard App.js layout
+        currentLayout.sensors = [
+          {
+            id: "T101",
+            name: "Intake Source Tank",
+            purpose: "Monitors raw chemical buffer reserves",
+            type: "analogue",
+            shape: "tank",
+            x1: 150, y1: 100, x2: 300, y2: 380,
+            units: "%",
+            limits: { lowLimit: 5.0, warnLow: 15.0, warnHigh: 92.0, highLimit: 98.0 }
+          },
+          {
+            id: "T102",
+            name: "Neutralization Reactor",
+            purpose: "Agitated reactor where treatment takes place",
+            type: "analogue",
+            shape: "tank",
+            x1: 580, y1: 150, x2: 780, y2: 480,
+            units: "%",
+            limits: { lowLimit: 10.0, warnLow: 20.0, warnHigh: 80.0, highLimit: 90.0 }
+          },
+          {
+            id: "T103",
+            name: "Effluent Holding Tank",
+            purpose: "Settling tank for neutralized buffer",
+            type: "analogue",
+            shape: "tank",
+            x1: 1050, y1: 100, x2: 1200, y2: 380,
+            units: "%",
+            limits: { lowLimit: 5.0, warnLow: 12.0, warnHigh: 95.0, highLimit: 99.0 }
+          },
+          {
+            id: "P101",
+            name: "Feed Intake Pump",
+            purpose: "Pumps fluid from Buffer Tank T101 into Neutralizer Reactor T102",
+            type: "digital",
+            shape: "pump",
+            x: 420, y: 350,
+            units: ""
+          },
+          {
+            id: "P102",
+            name: "Reactor Discharge Pump",
+            purpose: "Discharges processed fluid from Reactor T102 into Settler T103",
+            type: "digital",
+            shape: "pump",
+            x: 930, y: 350,
+            units: ""
+          },
+          {
+            id: "V101",
+            name: "Feed Control Valve",
+            purpose: "Enables or isolates flow into Neutralization Reactor T102",
+            type: "digital",
+            shape: "valve",
+            x: 480, y: 250,
+            orientation: "horizontal",
+            units: ""
+          },
+          {
+            id: "V102",
+            name: "Discharge Control Valve",
+            purpose: "Enables or isolates discharge flow into Effluent Holding Tank T103",
+            type: "digital",
+            shape: "valve",
+            x: 1000, y: 250,
+            orientation: "horizontal",
+            units: ""
+          }
+        ];
+      }
+
+      // Pre-populate input source
+      bgUrlInput.value = currentLayout.imageUrl;
+      renderWhiteboard();
+    });
+
+    // Toggle Panels
+    tabBtnInspector.addEventListener("click", () => {
+      tabBtnInspector.classList.add("border-indigo-500", "text-white");
+      tabBtnInspector.classList.remove("border-transparent", "text-slate-400");
+      tabBtnCode.classList.remove("border-indigo-500", "text-white");
+      tabBtnCode.classList.add("border-transparent", "text-slate-400");
+      panelInspector.classList.remove("hidden");
+      panelCode.classList.add("hidden");
+    });
+
+    tabBtnCode.addEventListener("click", () => {
+      tabBtnCode.classList.add("border-indigo-500", "text-white");
+      tabBtnCode.classList.remove("border-transparent", "text-slate-400");
+      tabBtnInspector.classList.remove("border-indigo-500", "text-white");
+      tabBtnInspector.classList.add("border-transparent", "text-slate-400");
+      panelCode.classList.remove("hidden");
+      panelInspector.classList.add("hidden");
+      generateLayoutJSCode();
+    });
+
+    // Render Whiteboard overlay markers
+    function renderWhiteboard() {
+      elementsLayer.innerHTML = "";
+      
+      // Update whiteboard dimensions dynamically to match background schematic settings
+      whiteboard.style.width = `${currentLayout.imageWidth}px`;
+      whiteboard.style.height = `${currentLayout.imageHeight}px`;
+      bgImagePreview.src = currentLayout.imageUrl;
+
+      currentLayout.sensors.forEach(sensor => {
+        let el = document.createElement("div");
+        el.className = "whiteboard-element";
+        el.id = `el-${sensor.id}`;
+        el.dataset.id = sensor.id;
+
+        // Position appropriately based on center coords
+        if (sensor.shape === "tank") {
+          const width = sensor.x2 - sensor.x1;
+          const height = sensor.y2 - sensor.y1;
+          const centerY = sensor.y1 + (height / 2);
+          const centerX = sensor.x1 + (width / 2);
+          
+          el.style.left = `${centerX}px`;
+          el.style.top = `${centerY}px`;
+          el.style.width = `${width}px`;
+          el.style.height = `${height}px`;
+
+          el.innerHTML = `
+            <div class="tank-shell-editor">
+              <span class="tank-title-editor">${sensor.id}</span>
+              <span class="text-[9px] text-slate-500 font-medium">${sensor.name || "Tank"}</span>
+              <div class="tank-resize-handle" data-id="${sensor.id}"></div>
+            </div>
+          `;
+        } else if (sensor.shape === "pump") {
+          const w = sensor.width || 48;
+          const h = sensor.height || 48;
+          el.style.left = `${sensor.x}px`;
+          el.style.top = `${sensor.y}px`;
+          el.style.width = `${w}px`;
+          el.style.height = `${h}px`;
+          el.innerHTML = `
+            <div class="pump-body-editor" style="width: 100%; height: 100%;">
+              <div class="flex flex-col items-center">
+                <span class="text-[10px] font-mono font-bold leading-none">${sensor.id}</span>
+                <span class="text-[8px] opacity-75 font-semibold">PUMP</span>
+              </div>
+            </div>
+          `;
+        } else if (sensor.shape === "valve") {
+          const w = sensor.width || 54;
+          const h = sensor.height || 36;
+          el.style.left = `${sensor.x}px`;
+          el.style.top = `${sensor.y}px`;
+          el.style.width = `${w}px`;
+          el.style.height = `${h}px`;
+          const orientationClass = sensor.orientation === "vertical" ? "vertical" : "horizontal";
+          el.innerHTML = `
+            <div class="valve-body-editor ${orientationClass}" style="width: 100%; height: 100%;">
+              <div class="flex flex-col items-center">
+                <span class="text-[10px] font-mono font-bold leading-none">${sensor.id}</span>
+                <span class="text-[7px] font-semibold">VALVE</span>
+              </div>
+            </div>
+          `;
+        } else {
+          // Dial card
+          const w = sensor.width || 85;
+          const h = sensor.height || 65;
+          el.style.left = `${sensor.x}px`;
+          el.style.top = `${sensor.y}px`;
+          el.style.width = `${w}px`;
+          el.style.height = `${h}px`;
+          el.innerHTML = `
+            <div class="dial-card-editor" style="width: 100%; height: 100%;">
+              <div class="text-[9px] font-mono text-slate-400 font-bold leading-none">${sensor.id}</div>
+              <div class="text-center font-mono font-extrabold text-xs text-white my-1">---</div>
+              <div class="w-full bg-slate-800 h-1 rounded overflow-hidden">
+                <div class="bg-indigo-500 h-full w-1/2"></div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Selected highlights
+        if (selectedElementId === sensor.id) {
+          el.classList.add("selected-component");
+        }
+
+        // Attach event listeners for selection & drag
+        el.addEventListener("mousedown", (e) => startDrag(e, sensor));
+
+        elementsLayer.appendChild(el);
+      });
+
+      componentCountEl.innerText = currentLayout.sensors.length;
+    }
+
+    // Drag-and-drop / Resize state machine
+    function startDrag(e, sensor) {
+      e.stopPropagation();
+
+      // Check if we clicked on the tank resize handle
+      if (e.target.classList.contains("tank-resize-handle")) {
+        isResizing = true;
+        selectedElementId = sensor.id;
+        
+        const width = sensor.x2 - sensor.x1;
+        const height = sensor.y2 - sensor.y1;
+        
+        resizeStartDims = {
+          x1: sensor.x1,
+          y1: sensor.y1,
+          startWidth: width,
+          startHeight: height,
+          startX: e.clientX,
+          startY: e.clientY
+        };
+        
+        selectComponent(sensor);
+        return;
+      }
+
+      isDragging = true;
+      selectedElementId = sensor.id;
+      
+      const el = document.getElementById(`el-${sensor.id}`);
+      const rect = el.getBoundingClientRect();
+      const parentRect = whiteboard.getBoundingClientRect();
+
+      // Store mouse offset relative to element center
+      dragOffset = {
+        x: e.clientX - rect.left - (rect.width / 2),
+        y: e.clientY - rect.top - (rect.height / 2)
+      };
+
+      selectComponent(sensor);
+    }
+
+    // Global Mousemove handles dragging/resizing
+    document.addEventListener("mousemove", (e) => {
+      if (!selectedElementId) return;
+
+      const sensor = currentLayout.sensors.find(s => s.id === selectedElementId);
+      if (!sensor) return;
+
+      const parentRect = whiteboard.getBoundingClientRect();
+
+      if (isDragging) {
+        // Compute new coordinates in whiteboard pixels
+        let rawX = e.clientX - parentRect.left - dragOffset.x;
+        let rawY = e.clientY - parentRect.top - dragOffset.y;
+
+        // Constraint clamps to maintain layout boundaries [0 to Width/Height]
+        let x = Math.max(0, Math.min(currentLayout.imageWidth, Math.round(rawX)));
+        let y = Math.max(0, Math.min(currentLayout.imageHeight, Math.round(rawY)));
+
+        if (sensor.shape === "tank") {
+          const width = sensor.x2 - sensor.x1;
+          const height = sensor.y2 - sensor.y1;
+          
+          sensor.x1 = x - Math.round(width / 2);
+          sensor.y1 = y - Math.round(height / 2);
+          sensor.x2 = sensor.x1 + width;
+          sensor.y2 = sensor.y1 + height;
+        } else {
+          sensor.x = x;
+          sensor.y = y;
+        }
+
+        updateInspectorCoords(sensor);
+        renderWhiteboard();
+      } 
+      else if (isResizing && sensor.shape === "tank") {
+        const deltaX = e.clientX - resizeStartDims.startX;
+        const deltaY = e.clientY - resizeStartDims.startY;
+        
+        let newWidth = Math.max(40, resizeStartDims.startWidth + deltaX);
+        let newHeight = Math.max(40, resizeStartDims.startHeight + deltaY);
+        
+        sensor.x2 = sensor.x1 + Math.round(newWidth);
+        sensor.y2 = sensor.y1 + Math.round(newHeight);
+
+        updateInspectorCoords(sensor);
+        renderWhiteboard();
+      }
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+      isResizing = false;
+    });
+
+    // Populate inspector form on element selection
+    function selectComponent(sensor) {
+      selectedElementId = sensor.id;
+      
+      // Update CSS highlighted dashes
+      document.querySelectorAll(".whiteboard-element").forEach(el => {
+        el.classList.remove("selected-component");
+      });
+      const selectedEl = document.getElementById(`el-${sensor.id}`);
+      if (selectedEl) {
+        selectedEl.classList.add("selected-component");
+      }
+
+      // Reveal Inspector panel
+      inspectorEmpty.classList.add("hidden");
+      inspectorForm.classList.remove("hidden");
+
+      // Populate basic details
+      inspectTagType.innerText = sensor.shape;
+      inspectHeaderId.innerText = `ID: ${sensor.id}`;
+      
+      propId.value = sensor.id;
+      propName.value = sensor.name || "";
+      propPurpose.value = sensor.purpose || "";
+      propType.value = sensor.type || "analogue";
+      propUnits.value = sensor.units || "";
+
+      // Hide/Show Shape-Specific Sections
+      if (sensor.shape === "valve") {
+        propSecValve.classList.remove("hidden");
+        propOrientation.value = sensor.orientation || "horizontal";
+      } else {
+        propSecValve.classList.add("hidden");
+      }
+
+      if (sensor.shape === "pump" || sensor.shape === "valve" || sensor.shape === "dial") {
+        propSecSizing.classList.remove("hidden");
+        propWidth.value = sensor.width || (sensor.shape === "pump" ? 48 : sensor.shape === "valve" ? 54 : 85);
+        propHeight.value = sensor.height || (sensor.shape === "pump" ? 48 : sensor.shape === "valve" ? 36 : 65);
+      } else {
+        propSecSizing.classList.add("hidden");
+      }
+
+      if (sensor.shape === "tank" || sensor.shape === "dial") {
+        propSecLimits.classList.remove("hidden");
+        // Initialize limits if missing
+        if (!sensor.limits) {
+          sensor.limits = { lowLimit: 5, warnLow: 15, warnHigh: 85, highLimit: 95 };
+        }
+        propLowLimit.value = sensor.limits.lowLimit;
+        propWarnLow.value = sensor.limits.warnLow;
+        propWarnHigh.value = sensor.limits.warnHigh;
+        propHighLimit.value = sensor.limits.highLimit;
+      } else {
+        propSecLimits.classList.add("hidden");
+      }
+
+      if (sensor.type === "digital") {
+        propSecDigital.classList.remove("hidden");
+        const statesObj = sensor.states || { 0: "Stopped", 1: "Running", 2: "Tripped" };
+        for (let i = 0; i <= 4; i++) {
+          const inputEl = document.querySelector(`.prop-state-input[data-state-idx="${i}"]`);
+          if (inputEl) {
+            inputEl.value = statesObj[i] !== undefined ? statesObj[i] : "";
+          }
+        }
+      } else {
+        propSecDigital.classList.add("hidden");
+      }
+
+      updateInspectorCoords(sensor);
+    }
+
+    const inspectTagType = document.getElementById("inspect-tag-type");
+    const inspectHeaderId = document.getElementById("inspect-header-id");
+
+    function updateInspectorCoords(sensor) {
+      if (sensor.shape === "tank") {
+        coordX.innerText = `x1:${sensor.x1}, x2:${sensor.x2}`;
+        coordY.innerText = `y1:${sensor.y1}, y2:${sensor.y2}`;
+      } else {
+        coordX.innerText = sensor.x;
+        coordY.innerText = sensor.y;
+      }
+    }
+
+    // Handle Form Value changes and bind real-time to state
+    function onFormChange() {
+      if (!selectedElementId) return;
+      const sensor = currentLayout.sensors.find(s => s.id === selectedElementId);
+      if (!sensor) return;
+
+      // Handle ID change with duplication protection
+      const newId = propId.value.trim().toUpperCase().replace(/\s+/g, "");
+      if (newId && newId !== sensor.id) {
+        const idExists = currentLayout.sensors.some(s => s.id === newId);
+        if (!idExists) {
+          // Rename HTML IDs, bindings, etc.
+          sensor.id = newId;
+          selectedElementId = newId;
+          inspectHeaderId.innerText = `ID: ${newId}`;
+        }
+      }
+
+      sensor.name = propName.value.trim();
+      sensor.purpose = propPurpose.value.trim();
+      sensor.type = propType.value;
+      sensor.units = propUnits.value.trim();
+
+      if (sensor.shape === "valve") {
+        sensor.orientation = propOrientation.value;
+      }
+
+      if (sensor.shape === "pump" || sensor.shape === "valve" || sensor.shape === "dial") {
+        sensor.width = parseInt(propWidth.value) || (sensor.shape === "pump" ? 48 : sensor.shape === "valve" ? 54 : 85);
+        sensor.height = parseInt(propHeight.value) || (sensor.shape === "pump" ? 48 : sensor.shape === "valve" ? 36 : 65);
+      }
+
+      if (sensor.shape === "tank" || sensor.shape === "dial") {
+        if (!sensor.limits) sensor.limits = {};
+        sensor.limits.lowLimit = parseFloat(propLowLimit.value) || 0;
+        sensor.limits.warnLow = parseFloat(propWarnLow.value) || 0;
+        sensor.limits.warnHigh = parseFloat(propWarnHigh.value) || 100;
+        sensor.limits.highLimit = parseFloat(propHighLimit.value) || 100;
+      }
+
+      if (sensor.type === "digital") {
+        propSecDigital.classList.remove("hidden");
+        if (!sensor.states || Object.keys(sensor.states).length === 0) {
+          sensor.states = { 0: "Stopped", 1: "Running", 2: "Tripped" };
+          for (let i = 0; i <= 4; i++) {
+            const inputEl = document.querySelector(`.prop-state-input[data-state-idx="${i}"]`);
+            if (inputEl) {
+              inputEl.value = sensor.states[i] || "";
+            }
+          }
+        } else {
+          for (let i = 0; i <= 4; i++) {
+            const inputEl = document.querySelector(`.prop-state-input[data-state-idx="${i}"]`);
+            if (inputEl) {
+              const val = inputEl.value.trim();
+              if (val) {
+                sensor.states[i] = val;
+              } else {
+                delete sensor.states[i];
+              }
+            }
+          }
+        }
+      } else {
+        propSecDigital.classList.add("hidden");
+        delete sensor.states;
+      }
+
+      renderWhiteboard();
+    }
+
+    // Register form changes
+    [propId, propName, propPurpose, propType, propUnits, propOrientation, propWidth, propHeight, propLowLimit, propWarnLow, propWarnHigh, propHighLimit].forEach(input => {
+      input.addEventListener("input", onFormChange);
+      input.addEventListener("change", onFormChange);
+    });
+
+    document.querySelectorAll(".prop-state-input").forEach(input => {
+      input.addEventListener("input", onFormChange);
+      input.addEventListener("change", onFormChange);
+    });
+
+    // Delete Component
+    btnDeleteElement.addEventListener("click", () => {
+      if (!selectedElementId) return;
+      if (confirm(`Are you sure you want to delete component ${selectedElementId}?`)) {
+        currentLayout.sensors = currentLayout.sensors.filter(s => s.id !== selectedElementId);
+        selectedElementId = null;
+        inspectorForm.classList.add("hidden");
+        inspectorEmpty.classList.remove("hidden");
+        renderWhiteboard();
+      }
+    });
+
+    // Background Image loading listeners
+    bgUrlInput.addEventListener("change", () => {
+      const url = bgUrlInput.value.trim();
+      if (url) {
+        currentLayout.imageUrl = url;
+        renderWhiteboard();
+      }
+    });
+
+    bgFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentLayout.imageUrl = event.target.result;
+          bgUrlInput.value = "Uploaded File Image";
+          renderWhiteboard();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Previous Layout js parser & import uploader
+    layoutFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const fileContent = event.target.result;
+          try {
+            // Find the object string by matching from the first '{' to the last '}'
+            const firstBrace = fileContent.indexOf('{');
+            const lastBrace = fileContent.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+              const objectString = fileContent.substring(firstBrace, lastBrace + 1);
+              // Safely evaluate the object expression using Function
+              const parsed = new Function("return (" + objectString + ")")();
+              if (parsed && parsed.imageUrl && Array.isArray(parsed.sensors)) {
+                currentLayout = parsed;
+                bgUrlInput.value = currentLayout.imageUrl;
+                selectedElementId = null;
+                inspectorForm.classList.add("hidden");
+                inspectorEmpty.classList.remove("hidden");
+                renderWhiteboard();
+                alert("Layout configuration imported successfully! Loaded " + currentLayout.sensors.length + " HMI components.");
+                return;
+              }
+            }
+            throw new Error("Could not find a valid layout object structure.");
+          } catch (err) {
+            alert("Error parsing layout.js file: " + err.message + "\nPlease verify that the file declares a valid javascript object structure, e.g. window.sensorLayout = { ... }.");
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    btnUseReactor.addEventListener("click", () => {
+      currentLayout.imageUrl = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1470&auto=format&fit=crop";
+      bgUrlInput.value = currentLayout.imageUrl;
+      renderWhiteboard();
+    });
+
+    btnUseBlueprint.addEventListener("click", () => {
+      currentLayout.imageUrl = "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=1470&auto=format&fit=crop"; // clean engineering blueprint
+      bgUrlInput.value = currentLayout.imageUrl;
+      renderWhiteboard();
+    });
+
+    // Add Component actions
+    addTankBtn.addEventListener("click", () => {
+      const tagCount = currentLayout.sensors.filter(s => s.shape === "tank").length + 1;
+      const newTag = `T${100 + tagCount}`;
+      const newSensor = {
+        id: newTag,
+        name: `New Storage Tank ${tagCount}`,
+        purpose: "Standard industrial containment vessel",
+        type: "analogue",
+        shape: "tank",
+        x1: 450, y1: 150, x2: 600, y2: 380,
+        units: "%",
+        limits: { lowLimit: 5, warnLow: 15, warnHigh: 85, highLimit: 95 }
+      };
+      currentLayout.sensors.push(newSensor);
+      renderWhiteboard();
+      selectComponent(newSensor);
+    });
+
+    addPumpBtn.addEventListener("click", () => {
+      const tagCount = currentLayout.sensors.filter(s => s.shape === "pump").length + 1;
+      const newTag = `P${100 + tagCount}`;
+      const newSensor = {
+        id: newTag,
+        name: `In-line Pump ${tagCount}`,
+        purpose: "Piston pump moving liquid through processing line",
+        type: "digital",
+        shape: "pump",
+        x: 600, y: 300,
+        width: 48,
+        height: 48,
+        states: {
+          0: "Stopped",
+          1: "Running",
+          2: "Tripped"
+        },
+        units: ""
+      };
+      currentLayout.sensors.push(newSensor);
+      renderWhiteboard();
+      selectComponent(newSensor);
+    });
+
+    addValveBtn.addEventListener("click", () => {
+      const tagCount = currentLayout.sensors.filter(s => s.shape === "valve").length + 1;
+      const newTag = `V${100 + tagCount}`;
+      const newSensor = {
+        id: newTag,
+        name: `Solenoid Valve ${tagCount}`,
+        purpose: "Isolates flow to safety vessels",
+        type: "digital",
+        shape: "valve",
+        x: 600, y: 300,
+        width: 54,
+        height: 36,
+        orientation: "horizontal",
+        states: {
+          0: "Closed",
+          1: "Open",
+          2: "Travel"
+        },
+        units: ""
+      };
+      currentLayout.sensors.push(newSensor);
+      renderWhiteboard();
+      selectComponent(newSensor);
+    });
+
+    addDialBtn.addEventListener("click", () => {
+      const tagCount = currentLayout.sensors.filter(s => s.shape === "dial").length + 1;
+      const newTag = `DI${100 + tagCount}`;
+      const newSensor = {
+        id: newTag,
+        name: `Line Transducer ${tagCount}`,
+        purpose: "Pipeline pressure / temperature dial",
+        type: "analogue",
+        shape: "dial",
+        x: 600, y: 300,
+        width: 85,
+        height: 65,
+        units: "bar",
+        limits: { lowLimit: 1, warnLow: 2, warnHigh: 8, highLimit: 9 }
+      };
+      currentLayout.sensors.push(newSensor);
+      renderWhiteboard();
+      selectComponent(newSensor);
+    });
+
+    // Code generator
+    function generateLayoutJSCode() {
+      const formattedSensors = currentLayout.sensors.map(s => {
+        let text = `    {\n      id: "${s.id}",\n      name: "${s.name}",\n      purpose: "${s.purpose}",\n      type: "${s.type}",\n      shape: "${s.shape}",`;
+        
+        if (s.shape === "tank") {
+          text += `\n      x1: ${s.x1}, y1: ${s.y1}, x2: ${s.x2}, y2: ${s.y2},`;
+        } else {
+          text += `\n      x: ${s.x}, y: ${s.y},`;
+          if (s.width) {
+            text += `\n      width: ${s.width},`;
+          }
+          if (s.height) {
+            text += `\n      height: ${s.height},`;
+          }
+        }
+
+        if (s.shape === "valve") {
+          text += `\n      orientation: "${s.orientation || 'horizontal'}",`;
+        }
+
+        if (s.type === "digital" && s.states) {
+          const stateLines = Object.entries(s.states)
+            .map(([k, v]) => `        ${k}: "${v}"`)
+            .join(",\n");
+          text += `\n      states: {\n${stateLines}\n      },`;
+        }
+
+        text += `\n      units: "${s.units || ''}",`;
+
+        if (s.limits) {
+          text += `\n      limits: {\n        lowLimit: ${s.limits.lowLimit},\n        warnLow: ${s.limits.warnLow},\n        warnHigh: ${s.limits.warnHigh},\n        highLimit: ${s.limits.highLimit}\n      }`;
+        }
+        
+        text += `\n    }`;
+        return text;
+      }).join(",\n");
+
+      const code = `/**\n * INDUSTRIAL HMI LAYOUT CONFIGURATION\n * This file defines coordinate layouts and metadata limits for sensors overlays\n */\nwindow.sensorLayout = {\n  imageUrl: "${currentLayout.imageUrl}",\n  imageWidth: ${currentLayout.imageWidth},\n  imageHeight: ${currentLayout.imageHeight},\n  sensors: [\n${formattedSensors}\n  ]\n};`;
+      
+      codeBlock.innerText = code;
+      return code;
+    }
+
+    // Copy Code Utility
+    btnCopyCode.addEventListener("click", () => {
+      const code = generateLayoutJSCode();
+      navigator.clipboard.writeText(code).then(() => {
+        const origText = btnCopyCode.innerHTML;
+        btnCopyCode.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> Copied!`;
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => {
+          btnCopyCode.innerHTML = origText;
+          if (window.lucide) window.lucide.createIcons();
+        }, 1500);
+      }).catch(err => {
+        alert("Failed to copy code to clipboard!");
+      });
+    });
+
+    // Download Code Utility
+    btnDownloadCode.addEventListener("click", () => {
+      const code = generateLayoutJSCode();
+      const blob = new Blob([code], { type: "text/javascript" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "layout.js";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+  </script>
+</body>
+</html>

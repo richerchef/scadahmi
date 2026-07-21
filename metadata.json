@@ -1,0 +1,6 @@
+{
+  "name": "Sensor Monitoring Dashboard",
+  "description": "A standalone Leaflet.js dashboard to visualize and play back timeseries sensor data overlaid on a plant schematic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
