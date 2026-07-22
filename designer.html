@@ -113,16 +113,19 @@
         <div class="space-y-3">
           <div>
             <label class="block text-[11px] text-slate-400 mb-1">Image URL Source</label>
-            <input type="text" id="bg-url-input" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Paste URL..." />
+            <input type="text" id="bg-url-input" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Paste image URL..." />
           </div>
-          <div class="grid grid-cols-2 gap-2 text-center text-xs">
-            <button id="btn-use-reactor" class="bg-indigo-600/10 hover:bg-indigo-600/25 border border-indigo-500/30 text-indigo-300 rounded py-1.5 transition font-medium">
-              Default Schematic
-            </button>
-            <button id="btn-use-blueprint" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 rounded py-1.5 transition font-medium">
-              Grid Blueprint
-            </button>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Width (px)</label>
+              <input type="number" id="bg-width-input" min="100" max="10000" step="10" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Height (px)</label>
+              <input type="number" id="bg-height-input" min="100" max="10000" step="10" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500" />
+            </div>
           </div>
+          <p class="text-[9px] text-slate-500">Auto-detects image dimensions when loaded, or edit manually.</p>
         </div>
       </div>
 
@@ -211,13 +214,34 @@
     <!-- CENTER AREA: INTERACTIVE CANVAS WITH PANNING & GRID -->
     <main class="flex-1 bg-slate-950 p-6 flex items-center justify-center relative overflow-auto canvas-grid select-none" id="designer-canvas-container">
       
-      <!-- WHITEBOARD CONTAINER (Matches exact image overlay coordinate system) -->
-      <div id="whiteboard" class="relative bg-slate-900 shadow-2xl transition-all duration-300 flex-shrink-0" style="width: 1200px; height: 600px;">
-        <!-- Loaded Schematic Background Image -->
-        <img id="bg-image-preview" src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1470&auto=format&fit=crop" class="w-full h-full object-cover opacity-35 filter grayscale pointer-events-none" alt="Industrial schematic diagram" />
-        
-        <!-- Interactive overlays injected here -->
-        <div id="elements-layer" class="absolute inset-0"></div>
+      <!-- Zoom Controls Floating Bar -->
+      <div class="absolute top-4 right-4 z-30 bg-slate-900/90 border border-slate-800 backdrop-blur rounded-lg shadow-xl p-1.5 flex items-center gap-1.5 text-slate-300">
+        <button id="btn-zoom-out" class="p-1.5 hover:bg-slate-800 rounded transition text-slate-400 hover:text-white" title="Zoom Out (-)">
+          <i data-lucide="zoom-out" class="w-4 h-4"></i>
+        </button>
+        <span id="zoom-label" class="text-xs font-mono font-bold px-1.5 text-indigo-300 min-w-[42px] text-center">100%</span>
+        <button id="btn-zoom-in" class="p-1.5 hover:bg-slate-800 rounded transition text-slate-400 hover:text-white" title="Zoom In (+)">
+          <i data-lucide="zoom-in" class="w-4 h-4"></i>
+        </button>
+        <div class="w-px h-4 bg-slate-800 mx-0.5"></div>
+        <button id="btn-zoom-reset" class="px-2 py-1 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition" title="Reset Zoom to 100%">
+          100%
+        </button>
+        <button id="btn-zoom-fit" class="px-2 py-1 text-[10px] font-semibold bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 rounded transition" title="Fit to Screen">
+          Fit
+        </button>
+      </div>
+
+      <!-- WHITEBOARD WRAPPER FOR SCALED SCROLLING -->
+      <div id="whiteboard-wrapper" class="relative transition-all duration-150 flex items-center justify-center">
+        <!-- WHITEBOARD CONTAINER (Matches exact image overlay coordinate system) -->
+        <div id="whiteboard" class="relative bg-slate-900 shadow-2xl transition-transform duration-100 flex-shrink-0" style="width: 1200px; height: 600px; transform-origin: top left;">
+          <!-- Loaded Schematic Background Image -->
+          <img id="bg-image-preview" src="" class="w-full h-full object-fill opacity-40 filter grayscale pointer-events-none" alt="Industrial schematic diagram" />
+          
+          <!-- Interactive overlays injected here -->
+          <div id="elements-layer" class="absolute inset-0"></div>
+        </div>
       </div>
     </main>
 
@@ -390,16 +414,10 @@
       <div id="panel-code" class="flex-1 flex flex-col hidden overflow-hidden bg-slate-950">
         <div class="p-4 border-b border-slate-850 flex justify-between items-center shrink-0">
           <span class="text-[10px] font-mono text-slate-400">Generated layout.js Code</span>
-          <div class="flex gap-1.5">
-            <button id="btn-copy-code" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-2.5 py-1 rounded transition flex items-center gap-1">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-              Copy
-            </button>
-            <button id="btn-download-code" class="text-[11px] bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-medium px-2.5 py-1 rounded transition flex items-center gap-1">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              Download
-            </button>
-          </div>
+          <button id="btn-copy-code" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3 py-1.5 rounded transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            Copy Code
+          </button>
         </div>
         <div class="flex-1 p-3 overflow-auto">
           <pre class="text-[10px] font-mono text-indigo-300 leading-relaxed"><code id="code-block" class="whitespace-pre">Loading layout representation...</code></pre>
@@ -512,22 +530,30 @@
       sensors: []
     };
 
+    let currentZoom = 1.0;
     let selectedElementId = null;
     let isDragging = false;
     let isResizing = false;
     let dragOffset = { x: 0, y: 0 };
-    let resizeStartDims = { w: 0, h: 0, x: 0, y: 0 };
+    let resizeStartDims = { startX: 0, startY: 0, startWidth: 0, startHeight: 0 };
 
     // DOM Elements
     const whiteboard = document.getElementById("whiteboard");
-    const elementsLayer = document.getElementById("elements Layer") || document.getElementById("elements-layer");
+    const whiteboardWrapper = document.getElementById("whiteboard-wrapper");
+    const elementsLayer = document.getElementById("elements-layer");
     const bgImagePreview = document.getElementById("bg-image-preview");
+    const designerCanvasContainer = document.getElementById("designer-canvas-container");
     
     const bgUrlInput = document.getElementById("bg-url-input");
+    const bgWidthInput = document.getElementById("bg-width-input");
+    const bgHeightInput = document.getElementById("bg-height-input");
     const bgFileInput = document.getElementById("bg-file-input");
-    
-    const btnUseReactor = document.getElementById("btn-use-reactor");
-    const btnUseBlueprint = document.getElementById("btn-use-blueprint");
+
+    const btnZoomOut = document.getElementById("btn-zoom-out");
+    const btnZoomIn = document.getElementById("btn-zoom-in");
+    const btnZoomReset = document.getElementById("btn-zoom-reset");
+    const btnZoomFit = document.getElementById("btn-zoom-fit");
+    const zoomLabel = document.getElementById("zoom-label");
     
     const addTankBtn = document.getElementById("add-tank");
     const addPumpBtn = document.getElementById("add-pump");
@@ -566,102 +592,120 @@
     
     const btnDeleteElement = document.getElementById("btn-delete-element");
     
-    // Tabs
+    // Tabs & Code
     const tabBtnInspector = document.getElementById("tab-btn-inspector");
     const tabBtnCode = document.getElementById("tab-btn-code");
     const panelInspector = document.getElementById("panel-inspector");
     const panelCode = document.getElementById("panel-code");
     const codeBlock = document.getElementById("code-block");
     const btnCopyCode = document.getElementById("btn-copy-code");
-    const btnDownloadCode = document.getElementById("btn-download-code");
 
-    // Initialize layout with any pre-existing structures in workspace if possible
+    // Initialize layout
     window.addEventListener("DOMContentLoaded", () => {
-      // First, trigger Lucide icon renders
       if (window.lucide) {
         window.lucide.createIcons();
       }
 
-      // Check if window.sensorLayout exists (defined in current layout.js loaded as a script/mocked)
       if (window.sensorLayout) {
         currentLayout = JSON.parse(JSON.stringify(window.sensorLayout));
       } else {
-        // Build fallback starting sensor set matching the standard App.js layout
-        currentLayout.sensors = [
-          {
-            id: "T101",
-            name: "Intake Source Tank",
-            purpose: "Monitors raw chemical buffer reserves",
-            type: "analogue",
-            shape: "tank",
-            x1: 150, y1: 100, x2: 300, y2: 380,
-            units: "%",
-            limits: { lowLimit: 5.0, warnLow: 15.0, warnHigh: 92.0, highLimit: 98.0 }
-          },
-          {
-            id: "T102",
-            name: "Neutralization Reactor",
-            purpose: "Agitated reactor where treatment takes place",
-            type: "analogue",
-            shape: "tank",
-            x1: 580, y1: 150, x2: 780, y2: 480,
-            units: "%",
-            limits: { lowLimit: 10.0, warnLow: 20.0, warnHigh: 80.0, highLimit: 90.0 }
-          },
-          {
-            id: "T103",
-            name: "Effluent Holding Tank",
-            purpose: "Settling tank for neutralized buffer",
-            type: "analogue",
-            shape: "tank",
-            x1: 1050, y1: 100, x2: 1200, y2: 380,
-            units: "%",
-            limits: { lowLimit: 5.0, warnLow: 12.0, warnHigh: 95.0, highLimit: 99.0 }
-          },
-          {
-            id: "P101",
-            name: "Feed Intake Pump",
-            purpose: "Pumps fluid from Buffer Tank T101 into Neutralizer Reactor T102",
-            type: "digital",
-            shape: "pump",
-            x: 420, y: 350,
-            units: ""
-          },
-          {
-            id: "P102",
-            name: "Reactor Discharge Pump",
-            purpose: "Discharges processed fluid from Reactor T102 into Settler T103",
-            type: "digital",
-            shape: "pump",
-            x: 930, y: 350,
-            units: ""
-          },
-          {
-            id: "V101",
-            name: "Feed Control Valve",
-            purpose: "Enables or isolates flow into Neutralization Reactor T102",
-            type: "digital",
-            shape: "valve",
-            x: 480, y: 250,
-            orientation: "horizontal",
-            units: ""
-          },
-          {
-            id: "V102",
-            name: "Discharge Control Valve",
-            purpose: "Enables or isolates discharge flow into Effluent Holding Tank T103",
-            type: "digital",
-            shape: "valve",
-            x: 1000, y: 250,
-            orientation: "horizontal",
-            units: ""
-          }
-        ];
+        currentLayout.sensors = [];
       }
 
-      // Pre-populate input source
-      bgUrlInput.value = currentLayout.imageUrl;
-      renderWhiteboard();
+      bgUrlInput.value = currentLayout.imageUrl || "";
+      bgWidthInput.value = currentLayout.imageWidth || 1200;
+      bgHeightInput.value = currentLayout.imageHeight || 600;
+
+      loadBackgroundImage(currentLayout.imageUrl);
+    });
+
+    // Zoom Controls
+    function setZoom(newZoom) {
+      currentZoom = Math.max(0.15, Math.min(3.5, newZoom));
+      applyZoom();
+    }
+
+    function applyZoom() {
+      whiteboard.style.transform = `scale(${currentZoom})`;
+      whiteboardWrapper.style.width = `${currentLayout.imageWidth * currentZoom}px`;
+      whiteboardWrapper.style.height = `${currentLayout.imageHeight * currentZoom}px`;
+      zoomLabel.innerText = `${Math.round(currentZoom * 100)}%`;
+    }
+
+    btnZoomIn.addEventListener("click", () => setZoom(currentZoom + 0.15));
+    btnZoomOut.addEventListener("click", () => setZoom(currentZoom - 0.15));
+    btnZoomReset.addEventListener("click", () => setZoom(1.0));
+    btnZoomFit.addEventListener("click", () => {
+      const containerW = designerCanvasContainer.clientWidth - 48;
+      const containerH = designerCanvasContainer.clientHeight - 48;
+      if (containerW > 0 && containerH > 0 && currentLayout.imageWidth > 0 && currentLayout.imageHeight > 0) {
+        const fitScale = Math.min(containerW / currentLayout.imageWidth, containerH / currentLayout.imageHeight);
+        setZoom(fitScale);
+      }
+    });
+
+    designerCanvasContainer.addEventListener("wheel", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        setZoom(currentZoom + delta);
+      }
+    }, { passive: false });
+
+    // Background Image & Dimensions Auto Detection
+    function loadBackgroundImage(url) {
+      if (!url) return;
+      const img = new Image();
+      img.onload = () => {
+        currentLayout.imageUrl = url;
+        if (img.naturalWidth && img.naturalHeight) {
+          currentLayout.imageWidth = img.naturalWidth;
+          currentLayout.imageHeight = img.naturalHeight;
+        }
+        bgUrlInput.value = url;
+        bgWidthInput.value = currentLayout.imageWidth;
+        bgHeightInput.value = currentLayout.imageHeight;
+        renderWhiteboard();
+      };
+      img.onerror = () => {
+        currentLayout.imageUrl = url;
+        renderWhiteboard();
+      };
+      img.src = url;
+    }
+
+    bgWidthInput.addEventListener("change", () => {
+      const w = parseInt(bgWidthInput.value, 10);
+      if (w && w >= 100) {
+        currentLayout.imageWidth = w;
+        renderWhiteboard();
+      }
+    });
+
+    bgHeightInput.addEventListener("change", () => {
+      const h = parseInt(bgHeightInput.value, 10);
+      if (h && h >= 100) {
+        currentLayout.imageHeight = h;
+        renderWhiteboard();
+      }
+    });
+
+    bgUrlInput.addEventListener("change", () => {
+      const url = bgUrlInput.value.trim();
+      if (url) {
+        loadBackgroundImage(url);
+      }
+    });
+
+    bgFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          loadBackgroundImage(event.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
     });
 
     // Toggle Panels
@@ -688,10 +732,11 @@
     function renderWhiteboard() {
       elementsLayer.innerHTML = "";
       
-      // Update whiteboard dimensions dynamically to match background schematic settings
       whiteboard.style.width = `${currentLayout.imageWidth}px`;
       whiteboard.style.height = `${currentLayout.imageHeight}px`;
       bgImagePreview.src = currentLayout.imageUrl;
+
+      applyZoom();
 
       currentLayout.sensors.forEach(sensor => {
         let el = document.createElement("div");
@@ -786,21 +831,20 @@
     function startDrag(e, sensor) {
       e.stopPropagation();
 
+      const parentRect = whiteboard.getBoundingClientRect();
+      const mouseX = (e.clientX - parentRect.left) / currentZoom;
+      const mouseY = (e.clientY - parentRect.top) / currentZoom;
+
       // Check if we clicked on the tank resize handle
       if (e.target.classList.contains("tank-resize-handle")) {
         isResizing = true;
         selectedElementId = sensor.id;
         
-        const width = sensor.x2 - sensor.x1;
-        const height = sensor.y2 - sensor.y1;
-        
         resizeStartDims = {
-          x1: sensor.x1,
-          y1: sensor.y1,
-          startWidth: width,
-          startHeight: height,
-          startX: e.clientX,
-          startY: e.clientY
+          startX: mouseX,
+          startY: mouseY,
+          startWidth: sensor.x2 - sensor.x1,
+          startHeight: sensor.y2 - sensor.y1
         };
         
         selectComponent(sensor);
@@ -810,15 +854,21 @@
       isDragging = true;
       selectedElementId = sensor.id;
       
-      const el = document.getElementById(`el-${sensor.id}`);
-      const rect = el.getBoundingClientRect();
-      const parentRect = whiteboard.getBoundingClientRect();
-
-      // Store mouse offset relative to element center
-      dragOffset = {
-        x: e.clientX - rect.left - (rect.width / 2),
-        y: e.clientY - rect.top - (rect.height / 2)
-      };
+      if (sensor.shape === "tank") {
+        const width = sensor.x2 - sensor.x1;
+        const height = sensor.y2 - sensor.y1;
+        const centerX = sensor.x1 + (width / 2);
+        const centerY = sensor.y1 + (height / 2);
+        dragOffset = {
+          x: mouseX - centerX,
+          y: mouseY - centerY
+        };
+      } else {
+        dragOffset = {
+          x: mouseX - sensor.x,
+          y: mouseY - sensor.y
+        };
+      }
 
       selectComponent(sensor);
     }
@@ -831,15 +881,15 @@
       if (!sensor) return;
 
       const parentRect = whiteboard.getBoundingClientRect();
+      const mouseX = (e.clientX - parentRect.left) / currentZoom;
+      const mouseY = (e.clientY - parentRect.top) / currentZoom;
 
       if (isDragging) {
-        // Compute new coordinates in whiteboard pixels
-        let rawX = e.clientX - parentRect.left - dragOffset.x;
-        let rawY = e.clientY - parentRect.top - dragOffset.y;
+        let targetX = Math.round(mouseX - dragOffset.x);
+        let targetY = Math.round(mouseY - dragOffset.y);
 
-        // Constraint clamps to maintain layout boundaries [0 to Width/Height]
-        let x = Math.max(0, Math.min(currentLayout.imageWidth, Math.round(rawX)));
-        let y = Math.max(0, Math.min(currentLayout.imageHeight, Math.round(rawY)));
+        let x = Math.max(0, Math.min(currentLayout.imageWidth, targetX));
+        let y = Math.max(0, Math.min(currentLayout.imageHeight, targetY));
 
         if (sensor.shape === "tank") {
           const width = sensor.x2 - sensor.x1;
@@ -858,8 +908,8 @@
         renderWhiteboard();
       } 
       else if (isResizing && sensor.shape === "tank") {
-        const deltaX = e.clientX - resizeStartDims.startX;
-        const deltaY = e.clientY - resizeStartDims.startY;
+        const deltaX = mouseX - resizeStartDims.startX;
+        const deltaY = mouseY - resizeStartDims.startY;
         
         let newWidth = Math.max(40, resizeStartDims.startWidth + deltaX);
         let newHeight = Math.max(40, resizeStartDims.startHeight + deltaY);
@@ -1114,18 +1164,6 @@
       }
     });
 
-    btnUseReactor.addEventListener("click", () => {
-      currentLayout.imageUrl = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1470&auto=format&fit=crop";
-      bgUrlInput.value = currentLayout.imageUrl;
-      renderWhiteboard();
-    });
-
-    btnUseBlueprint.addEventListener("click", () => {
-      currentLayout.imageUrl = "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=1470&auto=format&fit=crop"; // clean engineering blueprint
-      bgUrlInput.value = currentLayout.imageUrl;
-      renderWhiteboard();
-    });
-
     // Add Component actions
     addTankBtn.addEventListener("click", () => {
       const tagCount = currentLayout.sensors.filter(s => s.shape === "tank").length + 1;
@@ -1272,18 +1310,6 @@
       }).catch(err => {
         alert("Failed to copy code to clipboard!");
       });
-    });
-
-    // Download Code Utility
-    btnDownloadCode.addEventListener("click", () => {
-      const code = generateLayoutJSCode();
-      const blob = new Blob([code], { type: "text/javascript" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "layout.js";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     });
 
   </script>
